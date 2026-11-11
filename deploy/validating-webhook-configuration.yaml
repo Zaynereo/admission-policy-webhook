@@ -1,0 +1,37 @@
+# Example ValidatingWebhookConfiguration — not applied by this repository.
+# Replace caBundle with the base64-encoded CA from scripts/gen-certs.sh (or your PKI).
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: admission-policy-webhook
+  labels:
+    app.kubernetes.io/name: admission-policy-webhook
+webhooks:
+  - name: pod-policy.admission-policy-webhook.svc
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5
+    failurePolicy: Fail
+    clientConfig:
+      service:
+        name: admission-policy-webhook
+        namespace: admission-policy-webhook
+        path: /validate
+        port: 443
+      # caBundle: <output of scripts/gen-certs.sh — PEM bytes base64-encoded>
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: "Namespaced"
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+        scope: "Namespaced"
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        resources: ["jobs", "cronjobs"]
+        scope: "Namespaced"

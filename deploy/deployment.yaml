@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-policy-webhook
+  namespace: admission-policy-webhook
+  labels:
+    app.kubernetes.io/name: admission-policy-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: admission-policy-webhook
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: admission-policy-webhook
+    spec:
+      containers:
+        - name: webhook
+          image: admission-policy-webhook:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8443
+              name: https
+          env:
+            - name: WEBHOOK_LISTEN_ADDR
+              value: ":8443"
+            - name: WEBHOOK_TLS_CERT
+              value: /tls/tls.crt
+            - name: WEBHOOK_TLS_KEY
+              value: /tls/tls.key
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: tls
+          secret:
+            secretName: admission-policy-webhook-tls
